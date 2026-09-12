@@ -24,12 +24,20 @@ export default function MarketPage() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true)
-      const [playersRes, teamsRes] = await Promise.all([
-        supabase.from('players').select('*').order('price', { ascending: false }),
-        supabase.from('teams').select('*').order('name')
-      ])
-      if (!playersRes.error && playersRes.data) setPlayers(playersRes.data)
-      if (!teamsRes.error && teamsRes.data) setTeams(teamsRes.data)
+      try {
+        const res = await fetch('/api/players')
+        const data = await res.json()
+        if (data.players && data.players.length > 0) setPlayers(data.players)
+        if (data.teams && data.teams.length > 0) setTeams(data.teams)
+      } catch (err) {
+        console.error("API players load error, trying Supabase direct:", err)
+        const [playersRes, teamsRes] = await Promise.all([
+          supabase.from('players').select('*').order('price', { ascending: false }),
+          supabase.from('teams').select('*').order('name')
+        ])
+        if (playersRes.data) setPlayers(playersRes.data)
+        if (teamsRes.data) setTeams(teamsRes.data)
+      }
       setLoading(false)
     }
     fetchData()
