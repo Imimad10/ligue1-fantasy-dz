@@ -51,7 +51,17 @@ export default function VotePage() {
     const savedVotesData = localStorage.getItem('l1_votes_counts')
     if (savedVotesData) {
       try {
-        setVotesData(JSON.parse(savedVotesData))
+        const parsed = JSON.parse(savedVotesData)
+        // Ensure logos match INITIAL_VOTES
+        Object.keys(INITIAL_VOTES).forEach(catKey => {
+          if (parsed[catKey]) {
+            parsed[catKey] = parsed[catKey].map(item => {
+              const initItem = INITIAL_VOTES[catKey]?.find(i => i.id === item.id)
+              return { ...item, logo: initItem ? initItem.logo : item.logo }
+            })
+          }
+        })
+        setVotesData(parsed)
       } catch (e) {
         console.error(e)
       }

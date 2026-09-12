@@ -53,7 +53,11 @@ export default function ProfilePage() {
 
     // Charger local preference
     const savedCrest = localStorage.getItem(`user_crest_${currentUser.id}`)
-    if (savedCrest) setSelectedCrest(savedCrest)
+    if (savedCrest && CREST_OPTIONS.some(c => c.url === savedCrest)) {
+      setSelectedCrest(savedCrest)
+    } else {
+      setSelectedCrest('/logos/mca.png')
+    }
 
     const savedFavClub = localStorage.getItem(`user_fav_club_${currentUser.id}`)
     if (savedFavClub) setFavoriteClub(savedFavClub)
