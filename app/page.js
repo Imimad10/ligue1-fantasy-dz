@@ -92,6 +92,12 @@ export default function Home() {
     const { data: gw } = await supabase.from('gameweeks').select('id').eq('is_current', true).single()
     const gameweekId = gw?.id || 1
 
+    // S'assurer que le profil existe
+    await supabase.from('profiles').upsert({
+      id: user.id,
+      username: user.email ? user.email.split('@')[0] : `user_${user.id.slice(0, 5)}`
+    }, { onConflict: 'id' })
+
     // Vérifier si l'équipe existe déjà
     const { data: existingFt } = await supabase
       .from('fantasy_teams')
