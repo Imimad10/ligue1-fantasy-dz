@@ -92,6 +92,7 @@ export default function Header() {
         <span style={linkStyle('/market')} onClick={() => router.push('/market')}>🛒 Transferts</span>
         {user && <span style={linkStyle('/my-team')} onClick={() => router.push('/my-team')}>🏟️ Mon Équipe</span>}
         <span style={linkStyle('/leaderboard')} onClick={() => router.push('/leaderboard')}>🏆 Classement</span>
+        <span style={linkStyle('/vote')} onClick={() => router.push('/vote')}>🗳️ Votes</span>
         
         {/* Réservé uniquement à l'Admin imadbousserouel */}
         {isAdmin && (

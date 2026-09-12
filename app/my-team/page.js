@@ -250,15 +250,33 @@ export default function MyTeamPage() {
 
   const positionLabels = { GK: 'Gardien', DEF: 'Défenseurs', MID: 'Milieux', FWD: 'Attaquants' }
 
+  const userCrest = (user?.id && typeof window !== 'undefined' && localStorage.getItem(`user_crest_${user.id}`)) || '/logos/mca.png'
+  const favClub = (user?.id && typeof window !== 'undefined' && localStorage.getItem(`user_fav_club_${user.id}`)) || ''
+
   return (
     <main style={{ padding: '2rem 1rem', maxWidth: '950px', margin: '0 auto' }}>
       
       {/* En-tête de l'équipe */}
-      <div className="glass-panel" style={{ marginBottom: '2rem', textAlign: 'center' }}>
+      <div className="glass-panel" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ textAlign: 'left' }}>
-            <h1 style={{ fontSize: '1.8rem', margin: 0 }}>🏟️ {fantasyTeam.name}</h1>
-            <p style={{ color: 'var(--text-muted)', margin: '0.2rem 0 0' }}>Gère ta composition et effectue des remplacements</p>
+          <div style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <img
+              src={userCrest}
+              alt="Blason"
+              style={{
+                width: '50px', height: '50px', objectFit: 'contain',
+                filter: 'drop-shadow(0 0 10px rgba(0, 255, 135, 0.4))'
+              }}
+            />
+            <div>
+              <h1 style={{ fontSize: '1.8rem', margin: 0, color: '#fff' }}>{fantasyTeam.name}</h1>
+              {favClub && (
+                <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700, display: 'inline-block', marginTop: '2px' }}>
+                  ❤️ Supporter de : {favClub}
+                </span>
+              )}
+              <p style={{ color: 'var(--text-muted)', margin: '0.2rem 0 0', fontSize: '0.85rem' }}>Gère ta composition et effectue des remplacements</p>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>

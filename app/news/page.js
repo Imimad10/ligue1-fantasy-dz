@@ -17,39 +17,25 @@ export default function NewsPage() {
   const [lfpArticles, setLfpArticles] = useState([])
   const [loadingLfp, setLoadingLfp] = useState(false)
 
+  const [favClub, setFavClub] = useState('')
+
   useEffect(() => {
     fetchData()
     fetchLfpNews()
+    loadFavClub()
     const interval = setInterval(fetchData, 60000)
     return () => clearInterval(interval)
   }, [])
 
-  const fetchLfpNews = async () => {
-    setLoadingLfp(true)
+  const loadFavClub = async () => {
     try {
-      const res = await fetch('/api/lfp/news')
-      const data = await res.json()
-      if (data.articles) setLfpArticles(data.articles)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        const saved = localStorage.getItem(`user_fav_club_${session.user.id}`)
+        if (saved) setFavClub(saved)
+      }
     } catch (e) {
-      console.error('LFP Fetch error:', e)
-    } finally {
-      setLoadingLfp(false)
-    }
-  }
-
-  const fetchData = async () => {
-    try {
-      const res = await fetch('/api/fotmob')
-      const data = await res.json()
-      if (data.standings) setStandings(data.standings)
-      if (data.overviewMatches) setOverviewMatches(data.overviewMatches)
-      if (data.fixtureGroups) setFixtureGroups(data.fixtureGroups)
-      if (data.season) setSeason(data.season)
-      if (data.currentRound) setCurrentRound(data.currentRound)
-    } catch (e) {
-      console.error('Fetch error:', e)
-    } finally {
-      setLoading(false)
+      console.error(e)
     }
   }
 
@@ -58,6 +44,7 @@ export default function NewsPage() {
     { id: 'table', label: 'Table' },
     { id: 'fixtures', label: 'Fixtures' },
     { id: 'lfp_news', label: 'LFP Officiel' },
+    { id: 'my_club', label: favClub ? `⭐ Mon Club (${favClub})` : '⭐ Mon Club' },
   ]
 
   return (
@@ -85,6 +72,7 @@ export default function NewsPage() {
       <div style={{
         display: 'flex', gap: '0', marginBottom: '1.5rem',
         borderBottom: '2px solid rgba(255,255,255,0.08)',
+        overflowX: 'auto'
       }}>
         {tabs.map(tab => (
           <button
@@ -102,6 +90,7 @@ export default function NewsPage() {
               transition: 'all 0.2s',
               marginBottom: '-2px',
               fontFamily: 'inherit',
+              whiteSpace: 'nowrap'
             }}
           >
             {tab.label}
@@ -125,6 +114,7 @@ export default function NewsPage() {
           {activeTab === 'table' && <TableTab standings={standings} filter={tableFilter} setFilter={setTableFilter} />}
           {activeTab === 'fixtures' && <FixturesTab fixtureGroups={fixtureGroups} matches={overviewMatches} view={fixtureView} setView={setFixtureView} />}
           {activeTab === 'lfp_news' && <LfpNewsTab articles={lfpArticles} loading={loadingLfp} />}
+          {activeTab === 'my_club' && <MyClubTab favClub={favClub || 'MC Alger'} standings={standings} matches={overviewMatches} articles={lfpArticles} />}
         </>
       )}
     </main>
@@ -666,3 +656,64 @@ function LfpNewsTab({ articles, loading }) {
     </div>
   )
 }
+
+/* ─── MY CLUB DEDICATED TAB ─── */
+function MyClubTab({ favClub, standings, matches, articles }) {
+  const teamStandings = standings.find(s => s.name?.toLowerCase().includes(favClub.toLowerCase()) || favClub.toLowerCase().includes(s.name?.toLowerCase()))
+  const teamMatches = matches.filter(m => 
+    m.homeTeam?.name?.toLowerCase().includes(favClub.toLowerCase()) || 
+    m.awayTeam?.name?.toLowerCase().includes(favClub.toLowerCase())
+  )
+
+  const logoUrl = teamStandings?.logo || FOTMOB_CLUB_LOGOS[favClub] || '/logos/mca.png'
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      
+      {/* Club Banner */}
+      <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+        <img
+          src={logoUrl}
+          alt={favClub}
+          style={{ width: '75px', height: '75px', objectFit: 'contain', filter: 'drop-shadow(0 0 15px rgba(0,255,135,0.4))' }}
+        />
+        <div style={{ flex: 1 }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 700, textTransform: 'uppercase' }}>⭐ Ton Club Cœur</span>
+          <h2 style={{ fontSize: '1.8rem', margin: '2px 0 6px', color: '#fff' }}>{favClub}</h2>
+          {teamStandings ? (
+            <div style={{ display: 'flex', gap: '1.2rem', flexWrap: 'wrap', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              <span>Rang : <strong style={{ color: '#fff' }}>#{teamStandings.rank}</strong></span>
+              <span>Points : <strong style={{ color: 'var(--primary)' }}>{teamStandings.pts} pts</strong></span>
+              <span>Victoires : <strong style={{ color: '#22c55e' }}>{teamStandings.wins}V</strong></span>
+              <span>Diff : <strong style={{ color: teamStandings.goalDiff >= 0 ? 'var(--primary)' : 'var(--danger)' }}>{teamStandings.goalDiff > 0 ? '+' : ''}{teamStandings.goalDiff}</strong></span>
+            </div>
+          ) : (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Données du classement disponibles dès les prochaines rencontres.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Matchs du club */}
+      <div className="glass-panel">
+        <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#fff' }}>🏟️ Rencontres de {favClub}</h3>
+        {teamMatches.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+            {teamMatches.map(m => (
+              <FixtureRow key={m.id} match={m} />
+            ))}
+          </div>
+        ) : (
+          <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem' }}>Toutes les rencontres de {favClub} s'afficheront ici en direct.</p>
+        )}
+      </div>
+
+      {/* Communiqués & Actualités */}
+      <div className="glass-panel">
+        <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#fff' }}>📰 Communiqués & Actualités LFP Officiel</h3>
+        <LfpNewsTab articles={articles} loading={false} />
+      </div>
+
+    </div>
+  )
+}
+

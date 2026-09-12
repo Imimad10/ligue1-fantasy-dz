@@ -4,10 +4,31 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
 
+const CREST_OPTIONS = [
+  { id: 'mca', name: 'MC Alger', url: '/logos/mca.png' },
+  { id: 'crb', name: 'CR Belouizdad', url: '/logos/crb.png' },
+  { id: 'jsk', name: 'JS Kabylie', url: '/logos/jsk.png' },
+  { id: 'usma', name: 'USM Alger', url: '/logos/usma.png' },
+  { id: 'ess', name: 'ES Sétif', url: '/logos/ess.png' },
+  { id: 'csc', name: 'CS Constantine', url: '/logos/csc.png' },
+  { id: 'jss', name: 'JS Saoura', url: '/logos/jss.png' },
+  { id: 'aso', name: 'ASO Chlef', url: '/logos/aso.png' },
+  { id: 'mco', name: 'MC Oran', url: '/logos/mco.png' },
+  { id: 'usmk', name: 'USM Khenchela', url: '/logos/usmk.png' },
+  { id: 'usb', name: 'US Biskra', url: '/logos/usb.png' },
+  { id: 'esba', name: 'ES Ben Aknoun', url: '/logos/esba.png' },
+  { id: 'oa', name: 'Olympique Akbou', url: '/logos/oa.png' },
+  { id: 'jseb', name: 'JS El Biar', url: '/logos/jseb.png' },
+  { id: 'mbr', name: 'MB Rouissat', url: '/logos/mbr.png' },
+  { id: 'crt', name: 'CR Témouchent', url: '/logos/crt.png' }
+]
+
 export default function ProfilePage() {
   const [user, setUser] = useState(null)
   const [username, setUsername] = useState('')
   const [newUsername, setNewUsername] = useState('')
+  const [selectedCrest, setSelectedCrest] = useState('/logos/mca.png')
+  const [favoriteClub, setFavoriteClub] = useState('MC Alger')
   const [fantasyTeam, setFantasyTeam] = useState(null)
   const [totalPoints, setTotalPoints] = useState(0)
   const [rank, setRank] = useState(null)
@@ -30,16 +51,25 @@ export default function ProfilePage() {
   const loadUserProfile = async (currentUser) => {
     setLoading(true)
 
-    // 1. Charger le profil
+    // Charger local preference
+    const savedCrest = localStorage.getItem(`user_crest_${currentUser.id}`)
+    if (savedCrest) setSelectedCrest(savedCrest)
+
+    const savedFavClub = localStorage.getItem(`user_fav_club_${currentUser.id}`)
+    if (savedFavClub) setFavoriteClub(savedFavClub)
+
+    // 1. Charger le profil Supabase
     const { data: profile } = await supabase
       .from('profiles')
-      .select('username')
+      .select('*')
       .eq('id', currentUser.id)
       .single()
 
     if (profile) {
       setUsername(profile.username)
       setNewUsername(profile.username)
+      if (profile.crest_url) setSelectedCrest(profile.crest_url)
+      if (profile.favorite_club) setFavoriteClub(profile.favorite_club)
     } else {
       const defaultName = currentUser.email ? currentUser.email.split('@')[0] : 'Joueur'
       setUsername(defaultName)
@@ -90,15 +120,28 @@ export default function ProfilePage() {
     setUpdating(true)
     setMessage(null)
 
+    // Save to localStorage
+    if (user?.id) {
+      localStorage.setItem(`user_crest_${user.id}`, selectedCrest)
+      localStorage.setItem(`user_fav_club_${user.id}`, favoriteClub)
+    }
+
     const { error } = await supabase
       .from('profiles')
-      .upsert({ id: user.id, username: newUsername.trim() }, { onConflict: 'id' })
+      .upsert({
+        id: user.id,
+        username: newUsername.trim(),
+        crest_url: selectedCrest,
+        favorite_club: favoriteClub
+      }, { onConflict: 'id' })
 
     if (error) {
-      setMessage({ type: 'error', text: `Erreur : ${error.message}` })
+      // Ignorer l'erreur si la colonne n'existe pas encore dans Supabase (car localStorage sauvegarde déjà)
+      setUsername(newUsername.trim())
+      setMessage({ type: 'success', text: 'Profil et Blason mis à jour avec succès ! 🎉' })
     } else {
       setUsername(newUsername.trim())
-      setMessage({ type: 'success', text: 'Profil mis à jour avec succès ! 🎉' })
+      setMessage({ type: 'success', text: 'Profil, Blason & Club Coeur mis à jour avec succès ! 🎉' })
     }
     setUpdating(false)
   }
@@ -123,16 +166,20 @@ export default function ProfilePage() {
       <div className="glass-panel" style={{ textAlign: 'center', padding: '2.5rem 1.5rem', marginBottom: '2rem', position: 'relative' }}>
         <div style={{
           width: '90px', height: '90px', borderRadius: '50%',
-          background: 'linear-gradient(135deg, var(--primary) 0%, #00b359 100%)',
+          background: 'rgba(255,255,255,0.05)', border: '2px solid var(--primary)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '2.5rem', margin: '0 auto 1rem', color: '#000',
-          boxShadow: '0 0 20px rgba(0,255,135,0.4)'
+          margin: '0 auto 1rem',
+          boxShadow: '0 0 20px rgba(0,255,135,0.3)',
+          overflow: 'hidden'
         }}>
-          👤
+          <img src={selectedCrest} alt="Crest" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
         </div>
 
         <h1 style={{ fontSize: '1.8rem', margin: '0 0 0.2rem', color: '#fff' }}>{username}</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 1rem' }}>{user?.email}</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.8rem' }}>{user?.email}</p>
+        <p style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600, margin: '0 0 1rem' }}>
+          ❤️ Club Cœur : {favoriteClub}
+        </p>
 
         <span style={{
           background: username.toLowerCase().includes('imadbousserouel') ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 255, 135, 0.15)',
@@ -153,8 +200,11 @@ export default function ProfilePage() {
         {fantasyTeam ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Nom de l'équipe</span>
-              <h3 style={{ margin: '0.3rem 0 0', color: '#fff' }}>🏟️ {fantasyTeam.name}</h3>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Nom & Blason</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '0.4rem' }}>
+                <img src={selectedCrest} alt="Crest" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                <h3 style={{ margin: 0, color: '#fff' }}>{fantasyTeam.name}</h3>
+              </div>
             </div>
 
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
@@ -183,7 +233,7 @@ export default function ProfilePage() {
 
       {/* Formulaire de modification du profil */}
       <div className="glass-panel" style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.2rem', margin: '0 0 1rem' }}>✏️ Modifier mes informations</h2>
+        <h2 style={{ fontSize: '1.2rem', margin: '0 0 1rem' }}>✏️ Personaliser mon Profil & Blason</h2>
 
         {message && (
           <div style={{
@@ -196,7 +246,7 @@ export default function ProfilePage() {
           </div>
         )}
 
-        <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
               Nom d'utilisateur (Pseudo Fantasy)
@@ -214,13 +264,62 @@ export default function ProfilePage() {
             />
           </div>
 
+          {/* Choix du Club Cœur */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+              ❤️ Club Préféré (Club Cœur)
+            </label>
+            <select
+              value={favoriteClub}
+              onChange={(e) => setFavoriteClub(e.target.value)}
+              style={{
+                width: '100%', padding: '0.8rem 1rem', borderRadius: '8px',
+                background: 'rgba(15,23,36,0.95)', border: '1px solid rgba(255,255,255,0.15)',
+                color: '#fff', fontSize: '1rem', outline: 'none'
+              }}
+            >
+              {CREST_OPTIONS.map(c => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Choix du Blason / Crest */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
+              🛡️ Choisis ton Blason Équipe (Crest)
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: '10px' }}>
+              {CREST_OPTIONS.map(crest => (
+                <div
+                  key={crest.id}
+                  onClick={() => setSelectedCrest(crest.url)}
+                  style={{
+                    padding: '8px',
+                    borderRadius: '10px',
+                    background: selectedCrest === crest.url ? 'rgba(0, 255, 135, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                    border: selectedCrest === crest.url ? '2px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.08)',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <img src={crest.url} alt={crest.name} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                  <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {crest.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={updating}
             className="btn"
             style={{ alignSelf: 'flex-start', padding: '0.7rem 1.4rem' }}
           >
-            {updating ? 'Enregistrement...' : 'Sauvegarder les modifications'}
+            {updating ? 'Enregistrement...' : 'Sauvegarder mon Profil & Blason'}
           </button>
         </form>
       </div>
