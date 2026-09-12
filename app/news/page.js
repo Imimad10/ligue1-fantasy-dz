@@ -40,6 +40,35 @@ export default function NewsPage() {
     }
   }
 
+  const fetchLfpNews = async () => {
+    setLoadingLfp(true)
+    try {
+      const res = await fetch('/api/lfp/news')
+      const data = await res.json()
+      if (data.articles) setLfpArticles(data.articles)
+    } catch (e) {
+      console.error('LFP Fetch error:', e)
+    } finally {
+      setLoadingLfp(false)
+    }
+  }
+
+  const fetchData = async () => {
+    try {
+      const res = await fetch('/api/fotmob')
+      const data = await res.json()
+      if (data.standings) setStandings(data.standings)
+      if (data.overviewMatches) setOverviewMatches(data.overviewMatches)
+      if (data.fixtureGroups) setFixtureGroups(data.fixtureGroups)
+      if (data.season) setSeason(data.season)
+      if (data.currentRound) setCurrentRound(data.currentRound)
+    } catch (e) {
+      console.error('Fetch error:', e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'table', label: 'Table' },
