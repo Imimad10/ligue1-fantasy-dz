@@ -66,7 +66,7 @@ create table if not exists profiles (
 -- 7. Équipe fantasy
 create table if not exists fantasy_teams (
   id bigint generated always as identity primary key,
-  user_id uuid references profiles(id) on delete cascade not null,
+  user_id uuid references auth.users(id) on delete cascade not null,
   name text not null,
   budget numeric(5,1) not null default 100.0
 );
