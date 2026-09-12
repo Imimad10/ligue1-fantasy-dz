@@ -156,26 +156,29 @@ export default function MarketPage() {
   }
 
   const TEAM_LOGOS = {
-    1: 'https://lfp.dz/clubs-logos/677-1715269288.png',
-    2: 'https://lfp.dz/clubs-logos/670-1788197077.png',
-    3: 'https://lfp.dz/clubs-logos/jsk.png',
-    4: 'https://lfp.dz/clubs-logos/673-1715352459.png',
-    5: 'https://lfp.dz/clubs-logos/essetif.png',
-    6: 'https://lfp.dz/clubs-logos/678-1744537577.png',
-    524: 'https://lfp.dz/clubs-logos/524-1663164373.png',
-    675: 'https://lfp.dz/clubs-logos/675-1757531391.png',
-    653: 'https://lfp.dz/clubs-logos/653-1663164387.png',
-    518: 'https://lfp.dz/clubs-logos/518-1637065781.png',
-    755: 'https://lfp.dz/clubs-logos/755-1663164159.png',
-    758: 'https://lfp.dz/clubs-logos/758-1770131189.png',
-    759: 'https://lfp.dz/clubs-logos/759-1788436581.png',
-    409: 'https://lfp.dz/clubs-logos/409-1755174810.png',
-    754: 'https://lfp.dz/clubs-logos/754-1663163636.png'
+    1: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F677-1715269288.png',
+    2: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F670-1788197077.png',
+    3: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2Fjsk.png',
+    4: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F673-1715352459.png',
+    5: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2Fessetif.png',
+    6: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F678-1744537577.png',
+    524: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F524-1663164373.png',
+    675: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F675-1757531391.png',
+    653: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F653-1663164387.png',
+    518: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F518-1637065781.png',
+    755: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F755-1663164159.png',
+    758: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F758-1770131189.png',
+    759: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F759-1788436581.png',
+    409: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F409-1755174810.png',
+    754: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F754-1663163636.png'
   }
 
   const getTeamLogo = (teamId) => {
     const t = teams.find((t) => t.id === teamId)
-    return t?.logo_url || TEAM_LOGOS[teamId]
+    const url = t?.logo_url || TEAM_LOGOS[teamId]
+    if (!url) return null
+    if (url.startsWith('/api/image-proxy')) return url
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`
   }
 
   const budgetRestant = 100.0 - team.reduce((acc, p) => acc + Number(p.price), 0)

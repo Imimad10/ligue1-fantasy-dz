@@ -185,7 +185,10 @@ export default function Home() {
 
   const getTeamLogo = (teamId) => {
     const t = teams.find((t) => t.id === teamId)
-    return t?.logo_url || TEAM_LOGOS[teamId]
+    const url = t?.logo_url || TEAM_LOGOS[teamId]
+    if (!url) return null
+    if (url.startsWith('/api/image-proxy')) return url
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`
   }
 
   const budgetRestant = 100.0 - team.reduce((acc, p) => acc + Number(p.price), 0)

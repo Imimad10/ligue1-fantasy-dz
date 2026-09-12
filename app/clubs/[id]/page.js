@@ -104,9 +104,10 @@ export default function ClubDetailPage() {
         {club.logo && (
           <img
             src={club.logo}
-            alt="Logo du club"
+            alt={club.name || 'Logo du club'}
+            referrerPolicy="no-referrer"
             style={{
-              width: '100px', height: '100px', objectFit: 'contain',
+              width: '110px', height: '110px', objectFit: 'contain',
               filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))',
               marginBottom: '1rem', position: 'relative', zIndex: 1
             }}
@@ -114,6 +115,9 @@ export default function ClubDetailPage() {
         )}
         
         <div style={{ position: 'relative', zIndex: 1 }}>
+          <h1 style={{ fontSize: '2.2rem', fontWeight: 800, margin: '0 0 0.5rem', color: '#fff' }}>
+            {club.name}
+          </h1>
           {club.address && (
             <p style={{
               color: 'var(--primary)', fontSize: '0.95rem', fontWeight: 600,
