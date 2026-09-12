@@ -126,6 +126,9 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Lecture publique stats') THEN
     CREATE POLICY "Lecture publique stats" ON player_gameweek_stats FOR SELECT USING (true);
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Gestion admin stats') THEN
+    CREATE POLICY "Gestion admin stats" ON player_gameweek_stats FOR ALL USING (true) WITH CHECK (true);
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Lecture publique leagues') THEN
     CREATE POLICY "Lecture publique leagues" ON leagues FOR SELECT USING (true);
   END IF;
