@@ -156,29 +156,25 @@ export default function MarketPage() {
   }
 
   const TEAM_LOGOS = {
-    1: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F677-1715269288.png',
-    2: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F670-1788197077.png',
-    3: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2Fjsk.png',
-    4: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F673-1715352459.png',
-    5: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2Fessetif.png',
-    6: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F678-1744537577.png',
-    524: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F524-1663164373.png',
-    675: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F675-1757531391.png',
-    653: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F653-1663164387.png',
-    518: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F518-1637065781.png',
-    755: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F755-1663164159.png',
-    758: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F758-1770131189.png',
-    759: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F759-1788436581.png',
-    409: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F409-1755174810.png',
-    754: '/api/image-proxy?url=https%3A%2F%2Flfp.dz%2Fclubs-logos%2F754-1663163636.png'
+    1: '/logos/677.png',
+    2: '/logos/670.png',
+    3: '/logos/jsk.png',
+    4: '/logos/673.png',
+    5: '/logos/essetif.png',
+    6: '/logos/678.png',
+    524: '/logos/524.png',
+    675: '/logos/675.png',
+    653: '/logos/653.png',
+    518: '/logos/518.png',
+    755: '/logos/755.png',
+    758: '/logos/758.png',
+    759: '/logos/759.png',
+    409: '/logos/409.png',
+    754: '/logos/754.png'
   }
 
   const getTeamLogo = (teamId) => {
-    const t = teams.find((t) => t.id === teamId)
-    const url = t?.logo_url || TEAM_LOGOS[teamId]
-    if (!url) return null
-    if (url.startsWith('/api/image-proxy')) return url
-    return `/api/image-proxy?url=${encodeURIComponent(url)}`
+    return TEAM_LOGOS[teamId] || `/logos/${teamId}.png`
   }
 
   const budgetRestant = 100.0 - team.reduce((acc, p) => acc + Number(p.price), 0)

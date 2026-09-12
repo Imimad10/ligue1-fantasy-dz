@@ -274,12 +274,12 @@ export async function GET(request, { params }) {
       }
     });
 
-    const finalLogoRaw = scrapedLogo ? (scrapedLogo.startsWith('http') ? scrapedLogo : `https://lfp.dz${scrapedLogo}`) : rawLogo;
+    const staticLogo = `/logos/${id}.png`;
 
     return NextResponse.json({
       id,
       name: scrapedName || clubName,
-      logo: `/api/image-proxy?url=${encodeURIComponent(finalLogoRaw)}`,
+      logo: staticLogo,
       address: address || 'Algérie',
       colors: colors || 'Officiel LFP',
       players: players.length > 0 ? players : (known?.players || []),
@@ -292,7 +292,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({
       id,
       name: clubName,
-      logo: logo,
+      logo: `/logos/${id}.png`,
       address: known?.address || 'Algérie',
       colors: known?.colors || 'Officiel LFP',
       players: known?.players || [],

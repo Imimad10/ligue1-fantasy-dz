@@ -166,29 +166,25 @@ export default function Home() {
   }
 
   const TEAM_LOGOS = {
-    1: 'https://lfp.dz/clubs-logos/677-1715269288.png',
-    2: 'https://lfp.dz/clubs-logos/670-1788197077.png',
-    3: 'https://lfp.dz/clubs-logos/jsk.png',
-    4: 'https://lfp.dz/clubs-logos/673-1715352459.png',
-    5: 'https://lfp.dz/clubs-logos/essetif.png',
-    6: 'https://lfp.dz/clubs-logos/678-1744537577.png',
-    524: 'https://lfp.dz/clubs-logos/524-1663164373.png',
-    675: 'https://lfp.dz/clubs-logos/675-1757531391.png',
-    653: 'https://lfp.dz/clubs-logos/653-1663164387.png',
-    518: 'https://lfp.dz/clubs-logos/518-1637065781.png',
-    755: 'https://lfp.dz/clubs-logos/755-1663164159.png',
-    758: 'https://lfp.dz/clubs-logos/758-1770131189.png',
-    759: 'https://lfp.dz/clubs-logos/759-1788436581.png',
-    409: 'https://lfp.dz/clubs-logos/409-1755174810.png',
-    754: 'https://lfp.dz/clubs-logos/754-1663163636.png'
+    1: '/logos/677.png',
+    2: '/logos/670.png',
+    3: '/logos/jsk.png',
+    4: '/logos/673.png',
+    5: '/logos/essetif.png',
+    6: '/logos/678.png',
+    524: '/logos/524.png',
+    675: '/logos/675.png',
+    653: '/logos/653.png',
+    518: '/logos/518.png',
+    755: '/logos/755.png',
+    758: '/logos/758.png',
+    759: '/logos/759.png',
+    409: '/logos/409.png',
+    754: '/logos/754.png'
   }
 
   const getTeamLogo = (teamId) => {
-    const t = teams.find((t) => t.id === teamId)
-    const url = t?.logo_url || TEAM_LOGOS[teamId]
-    if (!url) return null
-    if (url.startsWith('/api/image-proxy')) return url
-    return `/api/image-proxy?url=${encodeURIComponent(url)}`
+    return TEAM_LOGOS[teamId] || `/logos/${teamId}.png`
   }
 
   const budgetRestant = 100.0 - team.reduce((acc, p) => acc + Number(p.price), 0)
