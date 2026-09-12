@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { supabase } from '../../lib/supabaseClient'
 import { FOTMOB_CLUB_LOGOS } from '../../lib/fotmobLiveData'
 
 export default function NewsPage() {
@@ -30,7 +31,7 @@ export default function NewsPage() {
   const loadFavClub = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
+      if (session?.user?.id && typeof window !== 'undefined') {
         const saved = localStorage.getItem(`user_fav_club_${session.user.id}`)
         if (saved) setFavClub(saved)
       }
