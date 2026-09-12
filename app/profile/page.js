@@ -31,7 +31,6 @@ export default function ProfilePage() {
   const [favoriteClub, setFavoriteClub] = useState('MC Alger')
   const [fantasyTeam, setFantasyTeam] = useState(null)
   const [totalPoints, setTotalPoints] = useState(0)
-  const [rank, setRank] = useState(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [message, setMessage] = useState(null)
@@ -51,81 +50,89 @@ export default function ProfilePage() {
   const loadUserProfile = async (currentUser) => {
     setLoading(true)
 
-    // Charger local preference
-    const savedCrest = localStorage.getItem(`user_crest_${currentUser.id}`)
-    if (savedCrest && CREST_OPTIONS.some(c => c.url === savedCrest)) {
-      setSelectedCrest(savedCrest)
-    } else {
-      setSelectedCrest('/logos/mca.png')
-    }
+    try {
+      // Charger local preference
+      if (typeof window !== 'undefined' && currentUser?.id) {
+        const savedCrest = localStorage.getItem(`user_crest_${currentUser.id}`)
+        if (savedCrest && CREST_OPTIONS.some(c => c.url === savedCrest)) {
+          setSelectedCrest(savedCrest)
+        }
+        const savedFavClub = localStorage.getItem(`user_fav_club_${currentUser.id}`)
+        if (savedFavClub) setFavoriteClub(savedFavClub)
+      }
 
-    const savedFavClub = localStorage.getItem(`user_fav_club_${currentUser.id}`)
-    if (savedFavClub) setFavoriteClub(savedFavClub)
+      // 1. Charger le profil Supabase
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .maybeSingle()
 
-    // 1. Charger le profil Supabase
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', currentUser.id)
-      .single()
+      const defaultName = (currentUser.email && typeof currentUser.email === 'string')
+        ? currentUser.email.split('@')[0]
+        : 'Joueur'
 
-    if (profile) {
-      setUsername(profile.username)
-      setNewUsername(profile.username)
-      if (profile.crest_url) setSelectedCrest(profile.crest_url)
-      if (profile.favorite_club) setFavoriteClub(profile.favorite_club)
-    } else {
-      const defaultName = currentUser.email ? currentUser.email.split('@')[0] : 'Joueur'
-      setUsername(defaultName)
-      setNewUsername(defaultName)
-    }
+      if (profile && profile.username) {
+        setUsername(String(profile.username))
+        setNewUsername(String(profile.username))
+        if (profile.crest_url) setSelectedCrest(profile.crest_url)
+        if (profile.favorite_club) setFavoriteClub(profile.favorite_club)
+      } else {
+        setUsername(defaultName)
+        setNewUsername(defaultName)
+      }
 
-    // 2. Charger l'équipe fantasy
-    const { data: ft } = await supabase
-      .from('fantasy_teams')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .order('id', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+      // 2. Charger l'équipe fantasy
+      const { data: ft } = await supabase
+        .from('fantasy_teams')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-    if (ft) {
-      setFantasyTeam(ft)
+      if (ft) {
+        setFantasyTeam(ft)
 
-      // Calculer les points totaux de l'équipe
-      const { data: ftp } = await supabase
-        .from('fantasy_team_players')
-        .select('player_id, is_captain, is_starting')
-        .eq('fantasy_team_id', ft.id)
+        // Calculer les points totaux de l'équipe
+        const { data: ftp } = await supabase
+          .from('fantasy_team_players')
+          .select('player_id, is_captain, is_starting')
+          .eq('fantasy_team_id', ft.id)
 
-      if (ftp && ftp.length > 0) {
-        const { data: statsData } = await supabase.from('player_gameweek_stats').select('player_id, points')
-        if (statsData) {
-          const statsMap = {}
-          statsData.forEach(s => {
-            statsMap[s.player_id] = (statsMap[s.player_id] || 0) + (s.points || 0)
-          })
-          const starters = ftp.filter(p => p.is_starting)
-          const pts = starters.reduce((acc, p) => {
-            const playerPts = statsMap[p.player_id] || 0
-            return acc + (p.is_captain ? playerPts * 2 : playerPts)
-          }, 0)
-          setTotalPoints(pts)
+        if (ftp && ftp.length > 0) {
+          const { data: statsData } = await supabase.from('player_gameweek_stats').select('player_id, points')
+          if (statsData) {
+            const statsMap = {}
+            statsData.forEach(s => {
+              statsMap[s.player_id] = (statsMap[s.player_id] || 0) + (s.points || 0)
+            })
+            const starters = ftp.filter(p => p.is_starting)
+            const pts = starters.reduce((acc, p) => {
+              const playerPts = statsMap[p.player_id] || 0
+              return acc + (p.is_captain ? playerPts * 2 : playerPts)
+            }, 0)
+            setTotalPoints(pts)
+          }
         }
       }
+    } catch (err) {
+      console.error('Error loading profile:', err)
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault()
-    if (!newUsername.trim()) return alert('Veuillez entrer un nom d\'utilisateur valide.')
+    if (!newUsername || !newUsername.trim()) return alert('Veuillez entrer un nom d\'utilisateur valide.')
     setUpdating(true)
     setMessage(null)
 
+    const cleanUsername = newUsername.trim()
+
     // Save to localStorage
-    if (user?.id) {
+    if (typeof window !== 'undefined' && user?.id) {
       localStorage.setItem(`user_crest_${user.id}`, selectedCrest)
       localStorage.setItem(`user_fav_club_${user.id}`, favoriteClub)
     }
@@ -134,18 +141,17 @@ export default function ProfilePage() {
       .from('profiles')
       .upsert({
         id: user.id,
-        username: newUsername.trim(),
+        username: cleanUsername,
         crest_url: selectedCrest,
         favorite_club: favoriteClub
       }, { onConflict: 'id' })
 
     if (error) {
-      // Ignorer l'erreur si la colonne n'existe pas encore dans Supabase (car localStorage sauvegarde déjà)
-      setUsername(newUsername.trim())
+      setUsername(cleanUsername)
       setMessage({ type: 'success', text: 'Profil et Blason mis à jour avec succès ! 🎉' })
     } else {
-      setUsername(newUsername.trim())
-      setMessage({ type: 'success', text: 'Profil, Blason & Club Coeur mis à jour avec succès ! 🎉' })
+      setUsername(cleanUsername)
+      setMessage({ type: 'success', text: 'Profil, Blason & Club Cœur mis à jour avec succès ! 🎉' })
     }
     setUpdating(false)
   }
@@ -163,6 +169,13 @@ export default function ProfilePage() {
     )
   }
 
+  const isAdmin = Boolean(
+    (username && typeof username === 'string' && username.toLowerCase().includes('imadbousserouel')) ||
+    (user?.email && typeof user.email === 'string' && user.email.toLowerCase().includes('imadbousserouel'))
+  )
+
+  const currentCrestUrl = selectedCrest || '/logos/mca.png'
+
   return (
     <main style={{ padding: '2rem 1rem', maxWidth: '750px', margin: '0 auto' }}>
       
@@ -176,22 +189,27 @@ export default function ProfilePage() {
           boxShadow: '0 0 20px rgba(0,255,135,0.3)',
           overflow: 'hidden'
         }}>
-          <img src={selectedCrest} alt="Crest" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
+          <img
+            src={currentCrestUrl}
+            alt="Crest"
+            style={{ width: '60px', height: '60px', objectFit: 'contain' }}
+            onError={(e) => { e.target.src = '/logos/mca.png' }}
+          />
         </div>
 
-        <h1 style={{ fontSize: '1.8rem', margin: '0 0 0.2rem', color: '#fff' }}>{username}</h1>
+        <h1 style={{ fontSize: '1.8rem', margin: '0 0 0.2rem', color: '#fff' }}>{username || 'Joueur'}</h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0 0 0.8rem' }}>{user?.email}</p>
         <p style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600, margin: '0 0 1rem' }}>
-          ❤️ Club Cœur : {favoriteClub}
+          ❤️ Club Cœur : {favoriteClub || 'MC Alger'}
         </p>
 
         <span style={{
-          background: username.toLowerCase().includes('imadbousserouel') ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 255, 135, 0.15)',
-          border: username.toLowerCase().includes('imadbousserouel') ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(0, 255, 135, 0.3)',
-          color: username.toLowerCase().includes('imadbousserouel') ? '#f87171' : 'var(--primary)',
+          background: isAdmin ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 255, 135, 0.15)',
+          border: isAdmin ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(0, 255, 135, 0.3)',
+          color: isAdmin ? '#f87171' : 'var(--primary)',
           padding: '0.4rem 1.2rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 700
         }}>
-          {username.toLowerCase().includes('imadbousserouel') ? '👑 Administrateur Principal' : '🎮 Joueur Ligue 1 Fantasy'}
+          {isAdmin ? '👑 Administrateur Principal' : '🎮 Joueur Ligue 1 Fantasy'}
         </span>
       </div>
 
@@ -206,7 +224,12 @@ export default function ProfilePage() {
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Nom & Blason</span>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '0.4rem' }}>
-                <img src={selectedCrest} alt="Crest" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                <img
+                  src={currentCrestUrl}
+                  alt="Crest"
+                  style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                  onError={(e) => { e.target.src = '/logos/mca.png' }}
+                />
                 <h3 style={{ margin: 0, color: '#fff' }}>{fantasyTeam.name}</h3>
               </div>
             </div>
@@ -218,7 +241,7 @@ export default function ProfilePage() {
 
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Budget Restant</span>
-              <h3 style={{ margin: '0.3rem 0 0', color: 'var(--accent)' }}>💰 {Number(fantasyTeam.budget).toFixed(1)}M</h3>
+              <h3 style={{ margin: '0.3rem 0 0', color: 'var(--accent)' }}>💰 {Number(fantasyTeam.budget || 0).toFixed(1)}M</h3>
             </div>
           </div>
         ) : (
@@ -308,7 +331,12 @@ export default function ProfilePage() {
                     transition: 'all 0.2s'
                   }}
                 >
-                  <img src={crest.url} alt={crest.name} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                  <img
+                    src={crest.url}
+                    alt={crest.name}
+                    style={{ width: '40px', height: '40px', objectFit: 'contain' }}
+                    onError={(e) => { e.target.style.opacity = '0.3' }}
+                  />
                   <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {crest.name}
                   </span>

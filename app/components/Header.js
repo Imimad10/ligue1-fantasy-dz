@@ -37,9 +37,11 @@ export default function Header() {
     router.push('/auth')
   }
 
-  const isAdmin = user && (
-    (username && username.toLowerCase().includes('imadbousserouel')) ||
-    (user.email && user.email.toLowerCase().includes('imadbousserouel'))
+  const isAdmin = Boolean(
+    user && (
+      (username && typeof username === 'string' && username.toLowerCase().includes('imadbousserouel')) ||
+      (user.email && typeof user.email === 'string' && user.email.toLowerCase().includes('imadbousserouel'))
+    )
   )
 
   const linkStyle = (path) => ({
