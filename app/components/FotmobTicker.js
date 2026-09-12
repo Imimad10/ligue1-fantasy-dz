@@ -32,6 +32,8 @@ export default function FotmobTicker() {
       gap: '1.5rem',
       overflowX: 'auto',
       backdropFilter: 'blur(12px)',
+      position: 'relative',
+      zIndex: 100,
     }}>
       {/* Badge Sync Source FotMob en Direct */}
       <div style={{
@@ -60,22 +62,11 @@ export default function FotmobTicker() {
       {loading ? (
         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>⏳ Chargement du direct FotMob...</span>
       ) : (
-        <div style={{ display: 'flex', gap: '1rem', flex: 1, overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: '1rem', flex: 1, overflowX: 'auto', paddingTop: '0.5rem', paddingBottom: '0.5rem', alignItems: 'center' }}>
           {matches.map((match) => (
             <div
               key={match.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                background: 'rgba(255, 255, 255, 0.035)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '10px',
-                padding: '0.5rem 0.9rem',
-                minWidth: '220px',
-                flexShrink: 0,
-                transition: 'all 0.2s ease',
-              }}
+              className="fotmob-match-card"
             >
               {/* Statut (FT / LIVE) */}
               <div style={{ textAlign: 'center', paddingRight: '8px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
