@@ -11,13 +11,11 @@ export default function Header() {
   const pathname = usePathname()
 
   useEffect(() => {
-    // Récupérer la session actuelle
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       if (session?.user) fetchUsername(session.user.id)
     })
 
-    // Écouter les changements d'auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) fetchUsername(session.user.id)
@@ -38,6 +36,11 @@ export default function Header() {
     setUsername('')
     router.push('/auth')
   }
+
+  const isAdmin = user && (
+    (username && username.toLowerCase().includes('imadbousserouel')) ||
+    (user.email && user.email.toLowerCase().includes('imadbousserouel'))
+  )
 
   const linkStyle = (path) => ({
     color: pathname === path ? 'var(--primary)' : 'var(--text-muted)',
@@ -89,19 +92,39 @@ export default function Header() {
         <span style={linkStyle('/market')} onClick={() => router.push('/market')}>🛒 Transferts</span>
         {user && <span style={linkStyle('/my-team')} onClick={() => router.push('/my-team')}>🏟️ Mon Équipe</span>}
         <span style={linkStyle('/leaderboard')} onClick={() => router.push('/leaderboard')}>🏆 Classement</span>
-        <span style={linkStyle('/admin/points')} onClick={() => router.push('/admin/points')}>🎯 Admin Points</span>
+        
+        {/* Réservé uniquement à l'Admin imadbousserouel */}
+        {isAdmin && (
+          <span style={linkStyle('/admin/points')} onClick={() => router.push('/admin/points')}>🎯 Admin Points</span>
+        )}
         
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ 
-              color: 'var(--primary)', 
-              fontSize: '0.85rem',
-              background: 'rgba(0,255,135,0.1)',
-              padding: '0.3rem 0.8rem',
-              borderRadius: '20px',
-              fontWeight: 600,
-            }}>
-              👤 {username || 'Joueur'}
+            <span 
+              onClick={() => router.push('/profile')}
+              title="Accéder à mon profil"
+              style={{ 
+                color: pathname === '/profile' ? '#000' : 'var(--primary)', 
+                fontSize: '0.85rem',
+                background: pathname === '/profile' ? 'var(--primary)' : 'rgba(0,255,135,0.1)',
+                border: '1px solid rgba(0,255,135,0.3)',
+                padding: '0.4rem 0.9rem',
+                borderRadius: '20px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+              onMouseEnter={e => {
+                if (pathname !== '/profile') e.currentTarget.style.background = 'rgba(0,255,135,0.25)'
+              }}
+              onMouseLeave={e => {
+                if (pathname !== '/profile') e.currentTarget.style.background = 'rgba(0,255,135,0.1)'
+              }}
+            >
+              👤 {username || 'Mon Profil'}
             </span>
             <button
               onClick={handleLogout}

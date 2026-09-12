@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabaseClient'
 
 export default function AdminPointsPage() {
@@ -12,9 +13,40 @@ export default function AdminPointsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
+  const [authorized, setAuthorized] = useState(false)
+  const router = useRouter()
 
+  // 🔐 Vérification d'accès admin côté serveur
   useEffect(() => {
-    fetchInitialData()
+    const checkAdmin = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
+        router.replace('/auth')
+        return
+      }
+
+      // Vérifier le profil dans la base de données
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', session.user.id)
+        .single()
+
+      const email = (session.user.email || '').toLowerCase()
+      const username = (profile?.username || '').toLowerCase()
+
+      const isAdmin = email.includes('imadbousserouel') || username.includes('imadbousserouel')
+
+      if (!isAdmin) {
+        router.replace('/')
+        return
+      }
+
+      setAuthorized(true)
+      fetchInitialData()
+    }
+
+    checkAdmin()
   }, [])
 
   useEffect(() => {
@@ -278,6 +310,11 @@ export default function AdminPointsPage() {
     } else {
       setMessage("✅ Points et stats enregistrés avec succès pour la Journée " + selectedGw + " !")
     }
+  }
+
+  // 🔐 Si pas autorisé, on affiche rien pendant la redirection
+  if (!authorized) {
+    return <main style={{ padding: '3rem', textAlign: 'center' }}><p style={{ color: 'var(--text-muted)' }}>🔐 Vérification des accès...</p></main>
   }
 
   if (loading) {
