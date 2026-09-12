@@ -134,13 +134,25 @@ export default function Home() {
       fantasyTeamId = ftData.id
     }
 
-    // Insérer les 15 joueurs
+    // RÈGLE : Garantir 1 GK, 3 DEF, 4 MID, 3 FWD comme titulaires (11 au total)
+    const gks = team.filter(p => p.position === 'GK')
+    const defs = team.filter(p => p.position === 'DEF')
+    const mids = team.filter(p => p.position === 'MID')
+    const fwds = team.filter(p => p.position === 'FWD')
+
+    const starterIds = new Set([
+      ...gks.slice(0, 1).map(p => p.id),
+      ...defs.slice(0, 3).map(p => p.id),
+      ...mids.slice(0, 4).map(p => p.id),
+      ...fwds.slice(0, 3).map(p => p.id),
+    ])
+
     const playersToInsert = team.map((p, i) => ({
       fantasy_team_id: fantasyTeamId,
       player_id: p.id,
       gameweek_id: gameweekId,
       is_captain: i === 0,
-      is_starting: i < 11,
+      is_starting: starterIds.has(p.id),
     }))
 
     const { error: pErr } = await supabase.from('fantasy_team_players').insert(playersToInsert)
@@ -151,6 +163,29 @@ export default function Home() {
       setTimeout(() => router.push('/my-team'), 1500)
     }
     setSaving(false)
+  }
+
+  const TEAM_LOGOS = {
+    1: 'https://lfp.dz/clubs-logos/677-1715269288.png',
+    2: 'https://lfp.dz/clubs-logos/670-1788197077.png',
+    3: 'https://lfp.dz/clubs-logos/jsk.png',
+    4: 'https://lfp.dz/clubs-logos/673-1715352459.png',
+    5: 'https://lfp.dz/clubs-logos/essetif.png',
+    6: 'https://lfp.dz/clubs-logos/678-1744537577.png',
+    524: 'https://lfp.dz/clubs-logos/524-1663164373.png',
+    675: 'https://lfp.dz/clubs-logos/675-1757531391.png',
+    653: 'https://lfp.dz/clubs-logos/653-1663164387.png',
+    518: 'https://lfp.dz/clubs-logos/518-1637065781.png',
+    755: 'https://lfp.dz/clubs-logos/755-1663164159.png',
+    758: 'https://lfp.dz/clubs-logos/758-1770131189.png',
+    759: 'https://lfp.dz/clubs-logos/759-1788436581.png',
+    409: 'https://lfp.dz/clubs-logos/409-1755174810.png',
+    754: 'https://lfp.dz/clubs-logos/754-1663163636.png'
+  }
+
+  const getTeamLogo = (teamId) => {
+    const t = teams.find((t) => t.id === teamId)
+    return t?.logo_url || TEAM_LOGOS[teamId]
   }
 
   const budgetRestant = 100.0 - team.reduce((acc, p) => acc + Number(p.price), 0)
@@ -386,10 +421,19 @@ export default function Home() {
               const isSelected = team.find((t) => t.id === p.id)
               return (
                 <div key={p.id} className="player-card" style={{ opacity: isSelected ? 0.4 : 1 }}>
-                  <div>
-                    <strong style={{ fontSize: '1rem' }}>{p.name}</strong> 
-                    <span style={{ marginLeft: '10px' }} className={`badge ${p.position}`}>{p.position}</span>
-                    <span style={{ marginLeft: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{getTeamName(p.team_id)}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {getTeamLogo(p.team_id) && (
+                      <img 
+                        src={getTeamLogo(p.team_id)} 
+                        alt="" 
+                        style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                      />
+                    )}
+                    <div>
+                      <strong style={{ fontSize: '1rem' }}>{p.name}</strong> 
+                      <span style={{ marginLeft: '8px' }} className={`badge ${p.position}`}>{p.position}</span>
+                      <span style={{ marginLeft: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{getTeamName(p.team_id)}</span>
+                    </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{p.price}M</span>

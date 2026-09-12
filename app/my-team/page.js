@@ -5,6 +5,24 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
 import { checkTransferWindow, saveTeamFormation } from '../actions/fantasy'
 
+const TEAM_LOGOS = {
+  1: 'https://lfp.dz/clubs-logos/677-1715269288.png', // MC Alger
+  2: 'https://lfp.dz/clubs-logos/670-1788197077.png', // CR Belouizdad
+  3: 'https://lfp.dz/clubs-logos/jsk.png',            // JS Kabylie
+  4: 'https://lfp.dz/clubs-logos/673-1715352459.png', // USM Alger
+  5: 'https://lfp.dz/clubs-logos/essetif.png',        // ES Sétif
+  6: 'https://lfp.dz/clubs-logos/678-1744537577.png', // CS Constantine
+  524: 'https://lfp.dz/clubs-logos/524-1663164373.png',
+  675: 'https://lfp.dz/clubs-logos/675-1757531391.png',
+  653: 'https://lfp.dz/clubs-logos/653-1663164387.png',
+  518: 'https://lfp.dz/clubs-logos/518-1637065781.png',
+  755: 'https://lfp.dz/clubs-logos/755-1663164159.png',
+  758: 'https://lfp.dz/clubs-logos/758-1770131189.png',
+  759: 'https://lfp.dz/clubs-logos/759-1788436581.png',
+  409: 'https://lfp.dz/clubs-logos/409-1755174810.png',
+  754: 'https://lfp.dz/clubs-logos/754-1663163636.png'
+}
+
 export default function MyTeamPage() {
   const [user, setUser] = useState(null)
   const [fantasyTeam, setFantasyTeam] = useState(null)
@@ -30,7 +48,6 @@ export default function MyTeamPage() {
   }, [])
 
   const loadTeam = async (userId) => {
-    // Récupérer l'équipe fantasy la plus récente
     const { data: ft, error: ftErr } = await supabase
       .from('fantasy_teams')
       .select('*')
@@ -46,15 +63,27 @@ export default function MyTeamPage() {
 
     setFantasyTeam(ft)
 
-    // Récupérer les joueurs de cette équipe avec les détails
     const { data: ftp } = await supabase
       .from('fantasy_team_players')
       .select('*, players(*)')
       .eq('fantasy_team_id', ft.id)
 
-    if (ftp) setTeamPlayers(ftp)
+    if (ftp && ftp.length > 0) {
+      // Auto-correction : Garantir 1 GK titulaire si la composition initiale n'en contient pas
+      const starters = ftp.filter(p => p.is_starting)
+      const startingGK = starters.find(p => (p.players?.position || p.position) === 'GK')
 
-    // Récupérer les points des joueurs (synchronisation automatique si non calculés)
+      if (!startingGK) {
+        const benchGK = ftp.find(p => !p.is_starting && (p.players?.position || p.position) === 'GK')
+        const outfieldStarter = starters.find(p => (p.players?.position || p.position) !== 'GK')
+        if (benchGK && outfieldStarter) {
+          benchGK.is_starting = true
+          outfieldStarter.is_starting = false
+        }
+      }
+      setTeamPlayers(ftp)
+    }
+
     let { data: statsData } = await supabase.from('player_gameweek_stats').select('player_id, points')
     if (!statsData || statsData.length === 0) {
       try {
@@ -74,7 +103,6 @@ export default function MyTeamPage() {
       setPlayerStatsMap(statsMap)
     }
 
-    // Check if the gameweek window is open
     const windowStatus = await checkTransferWindow()
     setIsLocked(!windowStatus.isOpen)
     if (windowStatus.name) setGwName(windowStatus.name)
@@ -98,7 +126,16 @@ export default function MyTeamPage() {
       return
     }
 
-    // Permuter is_starting entre selectedPlayer et tp
+    const pos1 = selectedPlayer.players?.position || selectedPlayer.position
+    const pos2 = tp.players?.position || tp.position
+
+    // RÈGLE : Le gardien de but est indispensable et ne peut être interverti qu'avec un autre gardien
+    if ((pos1 === 'GK' || pos2 === 'GK') && pos1 !== pos2) {
+      setMessage("🧤 Le gardien de but est indispensable et ne peut être remplacé que par un autre gardien !")
+      setSelectedPlayer(null)
+      return
+    }
+
     const updated = teamPlayers.map(p => {
       if (p.id === selectedPlayer.id) return { ...p, is_starting: tp.is_starting }
       if (p.id === tp.id) return { ...p, is_starting: selectedPlayer.is_starting }
@@ -110,7 +147,6 @@ export default function MyTeamPage() {
     setMessage("🔄 Changement effectué ! N'oublie pas de sauvegarder la composition.")
   }
 
-  // Définir le capitaine
   const handleSetCaptain = (tpId, e) => {
     e.stopPropagation()
     if (isLocked) {
@@ -125,25 +161,45 @@ export default function MyTeamPage() {
     setMessage("👑 Capitaine mis à jour ! N'oublie pas de sauvegarder.")
   }
 
-  // Sauvegarder la composition
   const handleSaveComposition = async () => {
     setSaving(true)
     setMessage(null)
 
-    // Check count of starting players = 11
-    const startingCount = teamPlayers.filter(p => p.is_starting).length
-    if (startingCount !== 11) {
-      setMessage(`❌ Ta composition doit comporter exactement 11 titulaires (actuellement : ${startingCount}).`)
+    const starters = teamPlayers.filter(p => p.is_starting)
+    if (starters.length !== 11) {
+      setMessage(`❌ Ta composition doit comporter exactement 11 titulaires (actuellement : ${starters.length}).`)
       setSaving(false)
       return
     }
 
-    // Call the server action with deadline validation
+    const posCount = (pos) => starters.filter(p => (p.players?.position || p.position) === pos).length
+
+    if (posCount('GK') !== 1) {
+      setMessage("❌ Un gardien de but est indispensable parmi tes 11 titulaires !")
+      setSaving(false)
+      return
+    }
+    if (posCount('DEF') < 3) {
+      setMessage("❌ Tu dois avoir au moins 3 défenseurs titulaires !")
+      setSaving(false)
+      return
+    }
+    if (posCount('MID') < 2) {
+      setMessage("❌ Tu dois avoir au moins 2 milieux de terrain titulaires !")
+      setSaving(false)
+      return
+    }
+    if (posCount('FWD') < 1) {
+      setMessage("❌ Tu dois avoir au moins 1 attaquant titulaire !")
+      setSaving(false)
+      return
+    }
+
     const updatedPlayersList = teamPlayers.map(p => ({
       player_id: p.player_id,
       is_starting: p.is_starting,
       is_captain: p.is_captain,
-      bench_order: p.is_starting ? null : 1 // simplified for now, would need a real UI for bench ordering
+      bench_order: p.is_starting ? null : 1
     }))
 
     const res = await saveTeamFormation(fantasyTeam.id, updatedPlayersList)
@@ -169,34 +225,28 @@ export default function MyTeamPage() {
     return (
       <main style={{ padding: '4rem 2rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <div className="glass-panel">
-          <h1 style={{ marginBottom: '1rem' }}>🏟️ Mon Équipe</h1>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
-            Tu n'as pas encore créé d'équipe fantasy.
-          </p>
-          <button className="btn" style={{ padding: '1rem 2rem' }} onClick={() => router.push('/')}>
-            ⚽ Composer mon équipe
-          </button>
+          <h2>⚠️ Aucune équipe trouvée</h2>
+          <p style={{ color: 'var(--text-muted)', margin: '1rem 0' }}>Tu n'as pas encore créé ton équipe pour la Ligue 1 Mobilis !</p>
+          <button className="btn" onClick={() => router.push('/market')}>Crée ton équipe maintenant</button>
         </div>
       </main>
     )
   }
 
-  const starters = teamPlayers.filter((p) => p.is_starting)
-  const subs = teamPlayers.filter((p) => !p.is_starting)
-  
-  // Calculate total points
-  const totalTeamPoints = teamPlayers.reduce((acc, p) => {
-    if (!p.is_starting) return acc
-    const pPts = playerStatsMap[p.player_id] || 0
-    return acc + (p.is_captain ? pPts * 2 : pPts)
-  }, 0)
+  const starters = teamPlayers.filter(p => p.is_starting)
+  const subs = teamPlayers.filter(p => !p.is_starting)
 
   const startersByPos = {
-    GK: starters.filter((p) => p.players?.position === 'GK'),
-    DEF: starters.filter((p) => p.players?.position === 'DEF'),
-    MID: starters.filter((p) => p.players?.position === 'MID'),
-    FWD: starters.filter((p) => p.players?.position === 'FWD'),
+    GK: starters.filter(p => (p.players?.position || p.position) === 'GK'),
+    DEF: starters.filter(p => (p.players?.position || p.position) === 'DEF'),
+    MID: starters.filter(p => (p.players?.position || p.position) === 'MID'),
+    FWD: starters.filter(p => (p.players?.position || p.position) === 'FWD'),
   }
+
+  const totalTeamPoints = starters.reduce((acc, p) => {
+    const pts = playerStatsMap[p.player_id] || 0
+    return acc + (p.is_captain ? pts * 2 : pts)
+  }, 0)
 
   const positionLabels = { GK: 'Gardien', DEF: 'Défenseurs', MID: 'Milieux', FWD: 'Attaquants' }
 
@@ -270,7 +320,7 @@ export default function MyTeamPage() {
           border: '1px solid rgba(59, 130, 246, 0.4)',
           color: '#60a5fa',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center'
         }}>
           <span>👆 Joueur sélectionné : <strong>{selectedPlayer.players?.name}</strong>. Clique sur un autre joueur pour procéder à l'échange.</span>
@@ -299,6 +349,8 @@ export default function MyTeamPage() {
               {startersByPos[pos].map((p) => {
                 const isSelected = selectedPlayer?.id === p.id
                 const pPts = playerStatsMap[p.player_id] || 0
+                const teamLogo = p.players?.teams?.logo_url || TEAM_LOGOS[p.players?.team_id]
+
                 return (
                   <div
                     key={p.id}
@@ -322,22 +374,31 @@ export default function MyTeamPage() {
                       <button
                         onClick={(e) => handleSetCaptain(p.id, e)}
                         title="Définir comme Capitaine"
-                      style={{
-                        position: 'absolute', top: '-8px', right: '-8px',
-                        background: p.is_captain ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
-                        color: p.is_captain ? '#000' : '#fff',
-                        border: 'none',
-                        borderRadius: '50%', width: '24px', height: '24px',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer',
-                      }}
-                    >
-                      C
-                    </button>
-                  )}
+                        style={{
+                          position: 'absolute', top: '-8px', right: '-8px',
+                          background: p.is_captain ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
+                          color: p.is_captain ? '#000' : '#fff',
+                          border: 'none',
+                          borderRadius: '50%', width: '24px', height: '24px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer',
+                        }}
+                      >
+                        C
+                      </button>
+                    )}
 
-                    <div style={{ fontSize: '1.4rem', marginBottom: '0.2rem' }}>
-                      {pos === 'GK' ? '🧤' : pos === 'DEF' ? '🛡️' : pos === 'MID' ? '🎯' : '⚡'}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '0.3rem' }}>
+                      <span style={{ fontSize: '1.2rem' }}>
+                        {pos === 'GK' ? '🧤' : pos === 'DEF' ? '🛡️' : pos === 'MID' ? '🎯' : '⚡'}
+                      </span>
+                      {teamLogo && (
+                        <img 
+                          src={teamLogo} 
+                          alt="" 
+                          style={{ width: '22px', height: '22px', objectFit: 'contain' }}
+                        />
+                      )}
                     </div>
                     <strong style={{ fontSize: '0.85rem', display: 'block', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {p.players?.name}
@@ -364,6 +425,8 @@ export default function MyTeamPage() {
           {subs.map((p) => {
             const isSelected = selectedPlayer?.id === p.id
             const pPts = playerStatsMap[p.player_id] || 0
+            const teamLogo = p.players?.teams?.logo_url || TEAM_LOGOS[p.players?.team_id]
+
             return (
               <div
                 key={p.id}
@@ -381,11 +444,20 @@ export default function MyTeamPage() {
                   transition: 'all 0.2s',
                 }}
               >
-                <div>
-                  <strong style={{ fontSize: '0.9rem', color: '#fff' }}>{p.players?.name}</strong>
-                  <div style={{ marginTop: '0.2rem' }}>
-                    <span className={`badge ${p.players?.position}`}>{p.players?.position}</span>
-                    <span style={{ marginLeft: '8px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>{p.players?.price}M</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {teamLogo && (
+                    <img 
+                      src={teamLogo} 
+                      alt="" 
+                      style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                    />
+                  )}
+                  <div>
+                    <strong style={{ fontSize: '0.9rem', color: '#fff' }}>{p.players?.name}</strong>
+                    <div style={{ marginTop: '0.2rem' }}>
+                      <span className={`badge ${p.players?.position}`}>{p.players?.position}</span>
+                      <span style={{ marginLeft: '8px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>{p.players?.price}M</span>
+                    </div>
                   </div>
                 </div>
                 <div style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
